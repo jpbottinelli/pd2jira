@@ -67,7 +67,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array("id"=>$priority))));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array("id"=>"$priority"))));
       $data_json = json_encode($data);
 
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
