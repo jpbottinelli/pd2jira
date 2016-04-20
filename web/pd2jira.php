@@ -54,14 +54,14 @@ if ($messages) foreach ($messages->messages as $webhook) {
 
       $verb = "triggered";
       
-      $team_owner = preg_match_all("/TEAM OWNER: (.*)/im", $service_description, $output_array);
+      preg_match_all("/TEAM OWNER: (.*)/im", $service_description, $team_owner);
 
       switch ($team_owner[1]) {
         case 'External Services':
           $jira_project = "ESO";
           break;
          case 'Test':
-          $jira_project = "STEMP";
+          $jira_project = "ES";
           break;
         default:
           $jira_project = "STEMP";
