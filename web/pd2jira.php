@@ -27,11 +27,11 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
 
-      if (strcmp($urgency, "LOW") !== 0){
-        $priority = 4;     
+      if (strcmp($urgency, "HIGH") == 0){
+        $priority = 2;     
       }
-      elseif (strcmp($urgency, "HIGH") !== 0) {
-        $priority = 2; 
+      elseif (strcmp($urgency, "LOW") == 0) {
+        $priority = 4; 
       } else {
         $priority = 10000;
       }
