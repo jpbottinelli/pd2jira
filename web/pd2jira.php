@@ -29,11 +29,14 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $incident_key = $webhook->data->incident->incident_key;
       $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
       $priority_id = 10000;
+      $priority_name = "Not Prioritized";
 
       if (strcmp($urgency, "HIGH") == 0) {
-        $priority_id = 2;     
+        $priority_id = 2;
+        $priority_name = "Critical";
       }
       elseif (strcmp($urgency, "LOW") == 0) {
+        $priority_name = "Minor"; 
         $priority_id = 4;
       }
      
