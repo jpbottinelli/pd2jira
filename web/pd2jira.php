@@ -26,14 +26,13 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee = $webhook->data->incident->assigned_to_user->name;
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
+      $priority = "10000";
 
-      if (strcmp($urgency, "HIGH") == 0){
-        $priority = 10000;     
+      if (strcmp($urgency, "HIGH") == 0) {
+        $priority = "2";     
       }
       elseif (strcmp($urgency, "LOW") == 0) {
-        $priority = 2; 
-      } else {
-        $priority = 4;
+        $priority = "4"; 
       }
       
       $address = explode("@", $assignee_email);
