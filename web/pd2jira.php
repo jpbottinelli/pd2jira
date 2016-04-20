@@ -26,14 +26,13 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee = $webhook->data->incident->assigned_to_user->name;
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
+      $priority = "10000";
 
-      if (strcmp($urgency, "HIGH") == 0){
-        $priority = 10000;     
+      if (strcmp($urgency, "HIGH") == 0) {
+        $priority = "2";     
       }
       elseif (strcmp($urgency, "LOW") == 0) {
-        $priority = 2; 
-      } else {
-        $priority = 4;
+        $priority = "4"; 
       }
       
       $address = explode("@", $assignee_email);
@@ -67,7 +66,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array("id"=>"$priority"))));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>"$priority"))));
       $data_json = json_encode($data);
 
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
