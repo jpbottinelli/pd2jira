@@ -68,7 +68,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
 
       $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>"$priority"))));
       $data_json = json_encode($data);
-      print $data_json
+      print $data_json;
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
       $status_code = $return['status_code'];
       $response = $return['response'];
