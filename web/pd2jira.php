@@ -26,18 +26,17 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee = $webhook->data->incident->assigned_to_user->name;
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
-      $priority_name = "Not Prioritized";
-      $priority_id = "10000";
+      $incident_key = $webhook->data->incident->incident_key;
+      $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
+      $priority_id = 10000;
 
       if (strcmp($urgency, "HIGH") == 0) {
-        $priority_name = "Critical";     
-        $priority_id = "2";     
+        $priority_id = 2;     
       }
       elseif (strcmp($urgency, "LOW") == 0) {
-        $priority_name = "Minor"; 
-        $priority_id = "4";
+        $priority_id = 4;
       }
-      
+     
       $address = explode("@", $assignee_email);
       
       if ($webhook->data->incident->trigger_summary_data->subject) {
@@ -51,6 +50,10 @@ if ($messages) foreach ($messages->messages as $webhook) {
 
       $verb = "triggered";
 
+      //If the escalation is for Zendesk tickets, build the url
+      if (strpos(strtoupper($service_name), strtoupper('ZENDESK')) !== false) {
+        $zendesk_url = "https://zendesk.medallia.com/hc/requests/$incident_key";
+      }
       //Let's make sure the note wasn't already added (Prevents a 2nd Jira ticket in the event the first request takes long enough to not succeed according to PagerDuty)
       $url = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
       $return = http_request($url, "", "GET", "token", "", $pd_api_token);
@@ -69,7 +72,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"From $service_name\r\nIncident: #$incident_number\r\nPagerDuty Url: $ticket_url\r\nPriority Name: $priority_name\r\nPriority Id: $priority_id", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>"$priority_id"))));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nPriority: $priority_name\r\nFrom: $service_name", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>$priority_id))));
       $data_json = json_encode($data);
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
       $status_code = $return['status_code'];
