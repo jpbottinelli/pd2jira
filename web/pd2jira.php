@@ -26,7 +26,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee = $webhook->data->incident->assigned_to_user->name;
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
-      $priority = "Not Prioritized";
+      $priority_name = "Not Prioritized";
       $priority_id = "10000";
 
       if (strcmp($urgency, "HIGH") == 0) {
@@ -34,7 +34,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $priority_id = "2";     
       }
       elseif (strcmp($urgency, "LOW") == 0) {
-        $priority = "Minor"; 
+        $priority_name = "Minor"; 
         $priority_id = "4";
       }
       
