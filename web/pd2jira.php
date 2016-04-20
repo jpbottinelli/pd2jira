@@ -23,6 +23,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $ticket_url = $webhook->data->incident->html_url;
       $pd_requester_id = $webhook->data->incident->assigned_to_user->id;
       $service_name = $webhook->data->incident->service->name;
+      $service_description = $webhook->data->incident->service->description;
       $assignee = $webhook->data->incident->assigned_to_user->name;
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
@@ -52,6 +53,20 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $summary = "$urgency - $trigger_summary_data";
 
       $verb = "triggered";
+      
+      $team_owner = preg_match_all("/TEAM OWNER: (.*)/im", $service_description, $output_array);
+
+      switch ($team_owner[1]) {
+        case 'External Services':
+          $jira_project = "ESO";
+          break;
+         case 'Test':
+          $jira_project = "STEMP";
+          break;
+        default:
+          $jira_project = "STEMP";
+          break;
+      }
 
       //If the escalation is for Zendesk tickets, build the url
       if (strpos(strtoupper($service_name), strtoupper('ZENDESK')) !== false) {
@@ -75,7 +90,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nPriority: $priority_name\r\nFrom: $service_name", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>$priority_id))));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nPriority: $priority_name\r\nFrom: $service_name\r\n$team_owner[1]", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]", 'priority'=>array('id'=>$priority_id))));
       $data_json = json_encode($data);
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
       $status_code = $return['status_code'];
