@@ -78,30 +78,32 @@ if ($messages) foreach ($messages->messages as $webhook) {
               date_default_timezone_set('America/Los_Angeles');
               preg_match_all("/^JIRA ticket (.*) has been created/im", $value['content'], $jira_key_to_comment_match);
               $jira_key_to_comment = trim($jira_key_to_comment_match[1][0]);
-              $update_date =  date('m/d/Y H:i:s');
-              $comment_url = "$jira_url/rest/api/2/issue/$jira_key_to_comment/comment";
-              $data_comment = array('body'=>"This incident was triggered again on $update_date. Please confirm that it's not a high sev issue");
-              $data_comment_json = json_encode($data_comment);
-              $return_comment = http_request($url, $data_comment_json, "POST", "basic", $jira_username, $jira_password);
-              
-              $status_code_comment = $return_comment['status_code'];
-              $response_comment = $return_comment['response'];
-              $response_obj = json_decode($response_comment);
-              $response_key = $response_obj->key;
+              if(!empty($jira_key_to_comment)) { 
+                $update_date =  date('m/d/Y H:i:s');
+                $comment_url = "$jira_url/rest/api/2/issue/$jira_key_to_comment/comment";
+                $data_comment = array('body'=>"This incident was triggered again on $update_date. Please confirm that it's not a high sev issue");
+                $data_comment_json = json_encode($data_comment);
+                $return_comment = http_request($url, $data_comment_json, "POST", "basic", $jira_username, $jira_password);
+                
+                $status_code_comment = $return_comment['status_code'];
+                $response_comment = $return_comment['response'];
+                $response_obj = json_decode($response_comment);
+                $response_key = $response_obj->key;
 
-              if ($status_code_comment == "201") {
-                //Update the PagerDuty ticket with the JIRA comment.
-                $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
-                $data_note = array('note'=>array('content'=>"JIRA ticket updated with latest incident repetition."),'requester_id'=>"$pd_requester_id");
-                $data_note_json = json_encode($data_note);
-                http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
-              }
-              else {
-                //Update the PagerDuty ticket if the JIRA comment isn't made.
-                $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
-                $data_note = array('note'=>array('content'=>"Couldn't update ticket with comment on repetition. $response"),'requester_id'=>"$pd_requester_id");
-                $data_note_json = json_encode($data_note);
-                http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
+                if ($status_code_comment == "201") {
+                  //Update the PagerDuty ticket with the JIRA comment.
+                  $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
+                  $data_note = array('note'=>array('content'=>"JIRA ticket updated with latest incident repetition."),'requester_id'=>"$pd_requester_id");
+                  $data_note_json = json_encode($data_note);
+                  http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
+                }
+                else {
+                  //Update the PagerDuty ticket if the JIRA comment isn't made.
+                  $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
+                  $data_note = array('note'=>array('content'=>"Couldn't update ticket with comment on repetition. $response"),'requester_id'=>"$pd_requester_id");
+                  $data_note_json = json_encode($data_note);
+                  http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
+                }
               }
               break 2; //Skip it cause it would be a duplicate
             }
