@@ -99,11 +99,15 @@ if ($messages) foreach ($messages->messages as $webhook) {
                 }
                 else {
                   //Update the PagerDuty ticket if the JIRA comment isn't made.
+                  error_log("Couldn't comment on ticket $jira_key_to_comment. PD incident: $incident_id");
                   $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
                   $data_note = array('note'=>array('content'=>"Couldn't update ticket with comment on repetition. $response"),'requester_id'=>"$pd_requester_id");
                   $data_note_json = json_encode($data_note);
                   http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
                 }
+              }
+              else {
+                error_log("JIRA ticket to comment not found");  
               }
               break 2; //Skip it cause it would be a duplicate
             }
