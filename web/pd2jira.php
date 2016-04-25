@@ -28,17 +28,15 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $urgency = strtoupper($webhook->data->incident->urgency);
       $incident_key = $webhook->data->incident->incident_key;
       $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
+      //Default JIRA Priority id set to "Not prioritized"
       $priority_id = 10000;
-      $priority_name = "Not Prioritized";
       //Default JIRA Project
       $jira_project = "STEMP";
 
       if (strcmp($urgency, "HIGH") == 0) {
         $priority_id = 2;
-        $priority_name = "Critical";
       }
       elseif (strcmp($urgency, "LOW") == 0) {
-        $priority_name = "Minor"; 
         $priority_id = 4;
       }
      
@@ -48,18 +46,18 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $trigger_summary_data = $webhook->data->incident->trigger_summary_data->subject;
       }
       else {
-        $trigger_summary_data = $webhook->data->incident->trigger_summary_data->description;
+        $trigger_summary_data = $trigger_summary_description;
       }
 
       $summary = "$urgency - $trigger_summary_data";
 
       $verb = "triggered";
       
-      preg_match_all("/^JIRA PROJECT KEY: (.*)$/im", $service_description, $jira_key_match);
+      preg_match_all("/^JIRA PROJECT KEY: (.*)$/im", $service_description, $jira_project_key_match);
 
-      $jira_key = $jira_key_match[1][0];
+      $jira_project_key = $jira_project_key_match[1][0];
       if(!empty($jira_key)) { 
-        $jira_project = trim($jira_key);
+        $jira_project = trim($jira_project_key);
       }
 
       //If the escalation is for Zendesk tickets, build the url
@@ -76,6 +74,35 @@ if ($messages) foreach ($messages->messages as $webhook) {
           foreach ($response['notes'] as $value) {
             $startsWith = "JIRA ticket";
             if (substr($value['content'], 0, strlen($startsWith)) === $startsWith) {
+              //If the ticket already exists in JIRA, we create a comment to show repetition
+              date_default_timezone_set('America/Los_Angeles');
+              preg_match_all("/^JIRA ticket (.*) has been created/im", $value['content'], $jira_key_to_comment_match);
+              $jira_key_to_comment = trim($jira_key_to_comment_match[1][0]);
+              $update_date =  date('m/d/Y H:i:s');
+              $comment_url = "$jira_url/rest/api/2/issue/$jira_key_to_comment/comment";
+              $data_comment = array('body'=>"This incident was triggered again on $update_date. Please confirm that it's not a high sev issue");
+              $data_comment_json = json_encode($data_comment);
+              $return_comment = http_request($url, $data_comment_json, "POST", "basic", $jira_username, $jira_password);
+              
+              $status_code_comment = $return_comment['status_code'];
+              $response_comment = $return_comment['response'];
+              $response_obj = json_decode($response_comment);
+              $response_key = $response_obj->key;
+
+              if ($status_code_comment == "201") {
+                //Update the PagerDuty ticket with the JIRA comment.
+                $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
+                $data_note = array('note'=>array('content'=>"JIRA ticket updated with latest incident repetition."),'requester_id'=>"$pd_requester_id");
+                $data_note_json = json_encode($data_note);
+                http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
+              }
+              else {
+                //Update the PagerDuty ticket if the JIRA comment isn't made.
+                $url_note = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
+                $data_note = array('note'=>array('content'=>"Couldn't update ticket with comment on repetition. $response"),'requester_id'=>"$pd_requester_id");
+                $data_note_json = json_encode($data_note);
+                http_request($url_note, $data_note_json, "POST", "token", "", $pd_api_token);
+              }
               break 2; //Skip it cause it would be a duplicate
             }
           }
@@ -85,7 +112,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nPriority: $priority_name\r\nFrom: $service_name", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id")));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nFrom: $service_name", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id")));
 
       $data_json = json_encode($data);
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
