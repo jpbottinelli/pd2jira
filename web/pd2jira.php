@@ -56,7 +56,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       preg_match_all("/^JIRA PROJECT KEY: (.*)$/im", $service_description, $jira_project_key_match);
 
       $jira_project_key = $jira_project_key_match[1][0];
-      if(!empty($jira_key)) { 
+      if(!empty($jira_project_key)) { 
         $jira_project = trim($jira_project_key);
       }
 
