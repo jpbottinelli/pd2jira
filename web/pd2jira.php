@@ -27,6 +27,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
       $incident_key = $webhook->data->incident->incident_key;
+      $incident_body_url = $webhook->data->incident->trigger_summary_data->trigger_details_html_url;
       $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
       //Default JIRA Priority id set to "Not prioritized"
       $priority_id = 10000;
@@ -47,6 +48,12 @@ if ($messages) foreach ($messages->messages as $webhook) {
       }
       else {
         $trigger_summary_data = $trigger_summary_description;
+      }
+
+      if($incident_body_url) {
+        $ticket_body_log_url = "$incident_body_url/show_html_details";
+        $pagerduty_body_html = http_request($ticket_body_log_url, "", "GET", "token", "", $pd_api_token);
+        $incident_body_html = "{html}$pagerduty_body_html{html}";
       }
 
       $summary = "$urgency - $trigger_summary_data";
@@ -74,7 +81,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
           foreach ($response['notes'] as $value) {
             $startsWith = "JIRA ticket";
             if (substr($value['content'], 0, strlen($startsWith)) === $startsWith) {
-              //If the ticket already exists in JIRA, we create a comment to show repetition
+              /*//If the ticket already exists in JIRA, we create a comment to show repetition
               date_default_timezone_set('America/Los_Angeles');
               preg_match_all("/^JIRA ticket (.*) has been created/im", $value['content'], $jira_key_to_comment_match);
               $jira_key_to_comment = trim($jira_key_to_comment_match[1][0]);
@@ -108,7 +115,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
               }
               else {
                 error_log("JIRA ticket to comment not found");  
-              }
+              }*/
               break 2; //Skip it cause it would be a duplicate
             }
           }
@@ -118,7 +125,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nFrom: $service_name", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id")));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nIncident description: $incident_body_html", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id")));
 
       $data_json = json_encode($data);
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
