@@ -52,7 +52,8 @@ if ($messages) foreach ($messages->messages as $webhook) {
 
       if($incident_body_url) {
         $ticket_body_log_url = "$incident_body_url/show_html_details";
-        $pagerduty_body_html = http_request($ticket_body_log_url, "", "GET", "token", "", $pd_api_token);
+        //$pagerduty_body_html = http_request($ticket_body_log_url, "", "GET", "token", "", $pd_api_token);
+        $pagerduty_body_html = file_get_contents("$ticket_body_log_url");
         $incident_body_html = "{html}$pagerduty_body_html{html}";
       }
 
