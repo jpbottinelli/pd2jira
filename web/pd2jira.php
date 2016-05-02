@@ -27,7 +27,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
       $incident_key = $webhook->data->incident->incident_key;
-      $incident_body_url = $webhook->data->incident->trigger_summary_data->trigger_details_html_url;
+      $incident_body_url = $webhook->data->incident->trigger_details_html_url;
       $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
       //Default JIRA Priority id set to "Not prioritized"
       $priority_id = 10000;
