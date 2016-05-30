@@ -27,7 +27,6 @@ if ($messages) foreach ($messages->messages as $webhook) {
       $assignee_email = $webhook->data->incident->assigned_to_user->email;
       $urgency = strtoupper($webhook->data->incident->urgency);
       $incident_key = $webhook->data->incident->incident_key;
-      $incident_body_url = $webhook->data->incident->trigger_details_html_url;
       $trigger_summary_description = $webhook->data->incident->trigger_summary_data->description;
       //Default JIRA Priority id set to "Not prioritized"
       $priority_id = 10000;
@@ -41,6 +40,9 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $priority_id = 4;
       }
      
+     /*Separates the email user name from the domain 
+     * so we have the username to be assigned on the JIRA ticket
+     */
       $address = explode("@", $assignee_email);
       
       if ($webhook->data->incident->trigger_summary_data->subject) {
@@ -50,14 +52,14 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $trigger_summary_data = $trigger_summary_description;
       }
 
-      if($incident_body_url) {
+      /*if($incident_body_url) {
         $ticket_body_log_url = "$incident_body_url/show_html_details";
         //$pagerduty_body_html = http_request($ticket_body_log_url, "", "GET", "token", "", $pd_api_token);
         $pagerduty_body_html = file_get_contents("$ticket_body_log_url");
         $incident_body_html = "{html}$pagerduty_body_html{html}";
-      }
+      }*/
 
-      $summary = "$urgency - $trigger_summary_data";
+      $summary = "$trigger_summary_data";
 
       $verb = "triggered";
       
@@ -126,7 +128,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       //Create the JIRA ticket when an incident has been triggered
       $url = "$jira_url/rest/api/2/issue/";
 
-      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\n$zendesk_url\r\nKey: $incident_key\r\nPagerDuty Url: $ticket_url\r\nIncident description: $incident_body_html", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id")));
+      $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",'description'=>"$trigger_summary_description\r\nKey: $incident_key", 'issuetype'=>array('name'=>"$jira_issue_type"), 'assignee'=>array('name'=>"$address[0]"), 'priority'=>array('id'=>"$priority_id"), 'customfield_12500'=>"$ticket_url", 'customfield_10227'=>"$zendesk_url"));
 
       $data_json = json_encode($data);
       $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
