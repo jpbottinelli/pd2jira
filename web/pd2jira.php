@@ -52,12 +52,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $trigger_summary_data = $trigger_summary_description;
       }
 
-      /*if($incident_body_url) {
-        $ticket_body_log_url = "$incident_body_url/show_html_details";
-        //$pagerduty_body_html = http_request($ticket_body_log_url, "", "GET", "token", "", $pd_api_token);
-        $pagerduty_body_html = file_get_contents("$ticket_body_log_url");
-        $incident_body_html = "{html}$pagerduty_body_html{html}";
-      }*/
+      
 
       $summary = "$trigger_summary_data";
 
@@ -72,12 +67,12 @@ if ($messages) foreach ($messages->messages as $webhook) {
 
       //If the escalation is for Zendesk tickets, build the url
       if (strpos(strtoupper($service_name), strtoupper('ZENDESK')) !== false) {
-        $zendesk_url = "https://zendesk.medallia.com/hc/requests/$incident_key";
+        $zendesk_url = "https://medallia.zendesk.com/hc/requests/$incident_key";
       }
 
       //Let's make sure the note wasn't already added (Prevents a 2nd Jira ticket in the event the first request takes long enough to not succeed according to PagerDuty)
-      $url = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
-      $return = http_request($url, "", "GET", "token", "", $pd_api_token);
+      $notes_url = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
+      $return = http_request($notes_url, "", "GET", "token", "", $pd_api_token);
       if ($return['status_code'] == '200') {
         $response = json_decode($return['response'], true);
         if (array_key_exists("notes", $response)) {
@@ -126,7 +121,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
       }
 
       //Create the JIRA ticket when an incident has been triggered
-      $url = "$jira_url/rest/api/2/issue/";
+      $issue_url = "$jira_url/rest/api/2/issue/";
 
       $data = array('fields'=>array('project'=>array('key'=>"$jira_project"),'summary'=>"$summary",
           'description'=>"$trigger_summary_description\r\nKey: $incident_key",
@@ -135,7 +130,7 @@ if ($messages) foreach ($messages->messages as $webhook) {
           'customfield_10227'=>"$zendesk_url"));
       
       $data_json = json_encode($data);
-      $return = http_request($url, $data_json, "POST", "basic", $jira_username, $jira_password);
+      $return = http_request($issue_url, $data_json, "POST", "basic", $jira_username, $jira_password);
       $status_code = $return['status_code'];
       $response = $return['response'];
       $response_obj = json_decode($response);
