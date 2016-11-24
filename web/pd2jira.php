@@ -2,6 +2,9 @@
 $messages = json_decode(file_get_contents("php://input"));
 
 $jira_url = getenv('JIRA_URL');
+if (substr($jira_url, strlen($jira_url)-1, 1) == "/") {
+  $jira_url = substr($jira_url, 0, strlen($jira_url)-1);
+}
 $jira_username = getenv('JIRA_USERNAME');
 $jira_password = getenv('JIRA_PASSWORD');
 $jira_issue_type = getenv('JIRA_ISSUE_TYPE');
@@ -52,9 +55,8 @@ if ($messages) foreach ($messages->messages as $webhook) {
         $trigger_summary_data = $trigger_summary_description;
       }
 
-      
-
       $summary = "$trigger_summary_data";
+      $summary = (strlen($summary) > 255) ? substr($summary,0,252) . '...' : $summary;
 
       $verb = "triggered";
       
@@ -144,6 +146,8 @@ if ($messages) foreach ($messages->messages as $webhook) {
         http_request($url, $data_json, "POST", "token", "", $pd_api_token);
       }
       else {
+        //Log the error
+        error_log("Error: Returned status code " . $status_code . " with response " . $response);
         //Update the PagerDuty ticket if the JIRA ticket isn't made.
         $url = "https://$pd_subdomain.pagerduty.com/api/v1/incidents/$incident_id/notes";
         $data = array('note'=>array('content'=>"A JIRA ticket failed to be created. $response"),'requester_id'=>"$pd_requester_id");
